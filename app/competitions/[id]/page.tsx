@@ -50,14 +50,14 @@ export default async function CompetitionPage({ params }: Props) {
                     </h2>
 
                     <p className="mb-6 text-slate-600">
-                        Izaberite Fight Card prema polu takmičara.
+                        Izaberite Fight Card prema polu i iskustvu takmičara.
                     </p>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="grid gap-5 sm:grid-cols-4">
 
-                        {/* Male Fight Card */}
+                        {/* Male Fight Card < 5*/}
                         <Link
-                            href={`/competitions/${id}/male`}
+                            href={`/competitions/${id}/male?experience=under5`}
                             className="group rounded-2xl border-2 border-blue-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-500 hover:shadow-md"
                         >
                             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-xl">
@@ -65,7 +65,36 @@ export default async function CompetitionPage({ params }: Props) {
                             </div>
 
                             <h3 className="text-xl font-bold text-slate-900">
-                                Men's Fight Card
+                                Men's Card
+                            </h3>
+                            <h3 className="text-xl font-bold text-slate-900"> 
+                                U5 Fights
+                            </h3>
+
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                                Prikaži muške takmičare grupisane po starosnim
+                                i težinskim kategorijama.
+                            </p>
+
+                            <span className="mt-5 inline-block font-semibold text-blue-700 group-hover:text-blue-900">
+                                Otvori Fight Card →
+                            </span>
+                        </Link>
+                        
+                        {/* Male Fight Card >= 5 */}
+                        <Link
+                            href={`/competitions/${id}/male?experience=5plus`}
+                            className="group rounded-2xl border-2 border-blue-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-500 hover:shadow-md"
+                        >
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-xl">
+                                🥊
+                            </div>
+
+                            <h3 className="text-xl font-bold text-slate-900">
+                                Men's Card
+                            </h3>
+                            <h3 className="text-xl font-bold text-slate-900">
+                                5+ Fights
                             </h3>
 
                             <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -80,7 +109,7 @@ export default async function CompetitionPage({ params }: Props) {
 
                         {/* Female Fight Card */}
                         <Link
-                            href={`/competitions/${id}/female`}
+                            href={`/competitions/${id}/female?experience=under5`}
                             className="group rounded-2xl border-2 border-pink-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-pink-500 hover:shadow-md"
                         >
                             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-xl">
@@ -88,7 +117,36 @@ export default async function CompetitionPage({ params }: Props) {
                             </div>
 
                             <h3 className="text-xl font-bold text-slate-900">
-                                Women's Fight Card
+                                Women's Card
+                            </h3>
+                            <h3 className="text-xl font-bold text-slate-900">
+                                U5 Fights
+                            </h3>
+
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                                Prikaži takmičarke grupisane po starosnim
+                                i težinskim kategorijama.
+                            </p>
+
+                            <span className="mt-5 inline-block font-semibold text-pink-700 group-hover:text-pink-900">
+                                Otvori Fight Card →
+                            </span>
+                        </Link>
+
+                        {/* Female Fight Card */}
+                        <Link
+                            href={`/competitions/${id}/female?experience=5plus`}
+                            className="group rounded-2xl border-2 border-pink-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-pink-500 hover:shadow-md"
+                        >
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-xl">
+                                🥊
+                            </div>
+
+                            <h3 className="text-xl font-bold text-slate-900">
+                                Women's Card
+                            </h3>
+                            <h3 className="text-xl font-bold text-slate-900">
+                                5+ Fights
                             </h3>
 
                             <p className="mt-2 text-sm leading-6 text-slate-600">

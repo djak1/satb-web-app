@@ -1,281 +1,365 @@
-import Link from "next/link"
-import { prisma } from "@/lib/prisma"
-import { AgedCategories } from "@/app/generated/prisma";
-export default async function Competition({params}: Promise<{id: string}>){
 
-    const competitionId = (await params).id
-    console.log("comId:", competitionId)
-    
-    //Get the name, location, dedline.. al info from competition - just in case for visualisation later
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+
+type Props = {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ experience?: string }>;
+};
+
+export default async function Competition({ params, searchParams }: Props) {
+    const { id: competitionId } = await params;
+    const { experience } = await searchParams;
+
+    // Get competition information
     const competition = await prisma.competition.findUnique({
-        where:{
-            id: competitionId
-        }
-    })
-
-    console.log(competition)
-    
-    //Get all registration from competitionRegistration, and include relation figters to get all names 
-    const registrations = await prisma.competitionRegistration.findMany({
-        where:{
-            competitionId: competitionId,
-            fighters: {
-                gender: 'FEMALE'
-            }
+        where: {
+            id: competitionId,
         },
-        include:{
-            fighters: true
+    });
+
+    // Filter registrations by experience
+    const experienceFilter =
+        experience === "under5"
+            ? { lt: 5 }
+            : { gte: 5 };
+
+    // Get female fight card data
+    const registrations = await prisma.competitionRegistration.findMany({
+        where: {
+            competitionId,
+            fighters: {
+                gender: "FEMALE",
+            },
+            experience: experienceFilter,
+        },
+        include: {
+            fighters: {
+                include: {
+                    club: true,
+                },
+            },
+        },
+    });
+
+    // Group registrations by age and weight category
+    type Registration = (typeof registrations)[number];
+
+    const groupedRegistrations: Record<
+        string,
+        Record<number, Registration[]>
+    > = {};
+
+    for (const registration of registrations) {
+        const category = registration.agedCategory;
+        const weightCategory = Number(registration.weightCategory);
+
+        if (!groupedRegistrations[category]) {
+            groupedRegistrations[category] = {};
         }
-    })
-    console.log(registrations)
 
-    const groupedRegistrations = registrations.reduce(
-        /**
-         * 
-         * @param groups object that will contain groups
-         * @param registration  the current element from registrations array
-         * @returns groups of aged categories
-         */
-        (groups, registration) => { //groups - object
-            const category = registration.agedCategory;
-            const weightCategory = Number(registration.weightCategory);
+        if (!groupedRegistrations[category][weightCategory]) {
+            groupedRegistrations[category][weightCategory] = [];
+        }
 
-            if(!groups[category]){ //If group for specificc category does not exist
-                groups[category] = []; //Create it
-            }
+        groupedRegistrations[category][weightCategory].push(registration);
+    }
 
-            if(!groups[category][weightCategory]){ //If group for specificc category does not exist
-                groups[category][weightCategory] = []; //Create it
-            }
-
-            groups[category][weightCategory].push(registration); //push -add element at the end of the array
-
-            return groups;
-        }, {} as Partial<
-                Record<
-                AgedCategories,
-                Record<number, typeof registrations>
-            >
-        >
-    )
-    console.log(Object.entries(groupedRegistrations)) 
-
-    
     const categoryStyles: Record<
         string,
         { border: string; header: string; badge: string }
     > = {
         U8: {
-            border: "border-amber-300",
+            border: "border-amber-200",
             header: "bg-amber-50",
             badge: "bg-amber-100 text-amber-800",
         },
         U10: {
-            border: "border-emerald-300",
+            border: "border-emerald-200",
             header: "bg-emerald-50",
             badge: "bg-emerald-100 text-emerald-800",
         },
         U12: {
-            border: "border-blue-300",
+            border: "border-blue-200",
             header: "bg-blue-50",
             badge: "bg-blue-100 text-blue-800",
         },
         U14: {
-            border: "border-violet-300",
+            border: "border-violet-200",
             header: "bg-violet-50",
             badge: "bg-violet-100 text-violet-800",
         },
         U16: {
-            border: "border-indigo-300",
+            border: "border-indigo-200",
             header: "bg-indigo-50",
             badge: "bg-indigo-100 text-indigo-800",
         },
         U18: {
-            border: "border-rose-300",
-            header: "bg-rose-50",
-            badge: "bg-rose-100 text-rose-800",
-        },
-        U24: {
-            border: "border-sky-300",
+            border: "border-sky-200",
             header: "bg-sky-50",
             badge: "bg-sky-100 text-sky-800",
         },
+        U24: {
+            border: "border-cyan-200",
+            header: "bg-cyan-50",
+            badge: "bg-cyan-100 text-cyan-800",
+        },
         MASTERS_ELITE: {
-            border: "border-emerald-300",
+            border: "border-emerald-200",
             header: "bg-emerald-50",
             badge: "bg-emerald-100 text-emerald-800",
         },
     };
 
-    
+    const totalFighters = Object.values(groupedRegistrations).reduce(
+        (total, weightGroups) =>
+            total +
+            Object.values(weightGroups).reduce(
+                (categoryTotal, fighters) =>
+                    categoryTotal + fighters.length,
+                0
+            ),
+        0
+    );
+
     return (
-        <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-7xl space-y-6">
+        <main className="mx-auto w-full max-w-7xl space-y-8">
 
-                {/* Header */}
-                <header className="rounded-2xl bg-gradient-to-r from-slate-950 via-red-950 to-slate-900 px-6 py-8 text-white shadow-lg sm:px-8">
-                    <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-red-300">
-                        Muay Thai Championship
+            {/* Page header */}
+            <header className="overflow-hidden rounded-xl border border-[#DCE4ED] bg-white shadow-sm">
+                <div className="border-b border-[#E8EDF3] px-6 py-6 sm:px-8">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#315A83]">
+                        Muay Thai Management
                     </p>
 
-                    <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                        {competition?.name} — Fight Card
-                    </h1>
+                    <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight text-[#142B4A]">
+                                {competition?.name} – Ženski Fight Card
+                            </h1>
 
-                    <p className="mt-3 text-slate-300">
-                        {competition?.location}
-                    </p>
+                            <p className="mt-2 text-sm text-slate-500">
+                                Pregled prijavljenih takmičarki po uzrasnim i težinskim kategorijama.
+                            </p>
+                        </div>
 
-                    {competition?.date && (
-                        <p className="mt-1 text-sm text-slate-400">
-                            {new Date(competition.date).toLocaleDateString("sr-RS")}
+                        <Link
+                            href={`/api/competitions/${competitionId}/export/female?experience=${experience}`}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#142B4A] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#24476B]"
+                        >
+                            <span>↓</span>
+                            Export PDF
+                        </Link>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+                        {competition?.location && (
+                            <p className="flex items-center gap-2">
+                                <span>📍</span>
+                                {competition.location}
+                            </p>
+                        )}
+
+                        {competition?.date && (
+                            <p className="flex items-center gap-2">
+                                <span>📅</span>
+                                {new Date(competition.date).toLocaleDateString("sr-RS")}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Summary */}
+                <div className="grid grid-cols-1 divide-y divide-[#E8EDF3] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                    <div className="px-6 py-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Ukupno takmičarki
                         </p>
-                    )}
-                </header>
+                        <p className="mt-1 text-2xl font-bold text-[#142B4A]">
+                            {totalFighters}
+                        </p>
+                    </div>
 
-                {/* Age categories */}
-                <div className="space-y-6">
-                    {Object.entries(groupedRegistrations).map(
-                        ([category, weightGroups]) => {
-                            const style = categoryStyles[category] ?? {
-                                border: "border-slate-200",
-                                header: "bg-slate-100",
-                                badge: "bg-slate-100 text-slate-700",
-                            };
+                    <div className="px-6 py-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Uzrasne kategorije
+                        </p>
+                        <p className="mt-1 text-2xl font-bold text-[#142B4A]">
+                            {Object.keys(groupedRegistrations).length}
+                        </p>
+                    </div>
 
-                            const fightersCount = Object.values(
-                                weightGroups ?? {}
-                            ).reduce(
-                                (total, fighters) => total + fighters.length,
-                                0
-                            );
+                    <div className="px-6 py-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Iskustvo
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-[#24476B]">
+                            {experience === "under5"
+                                ? "Do 4 borbe"
+                                : "5 ili više borbi"}
+                        </p>
+                    </div>
+                </div>
+            </header>
 
-                            return (
-                                <section
-                                    key={category}
-                                    className={`overflow-hidden rounded-2xl border-2 ${style.border} bg-white shadow-sm`}
+            {/* Age categories */}
+            <div className="space-y-6">
+                {Object.entries(groupedRegistrations).map(
+                    ([category, weightGroups]) => {
+                        const style = categoryStyles[category] ?? {
+                            border: "border-[#DCE4ED]",
+                            header: "bg-[#F1F5F9]",
+                            badge: "bg-[#EAF0F6] text-[#24476B]",
+                        };
+
+                        const fightersCount = Object.values(
+                            weightGroups ?? {}
+                        ).reduce(
+                            (total, fighters) => total + fighters.length,
+                            0
+                        );
+
+                        return (
+                            <section
+                                key={category}
+                                className={`overflow-hidden rounded-xl border ${style.border} bg-white shadow-sm`}
+                            >
+                                {/* Age category header */}
+                                <div
+                                    className={`flex flex-wrap items-center justify-between gap-3 border-b ${style.border} ${style.header} px-5 py-4 sm:px-6`}
                                 >
-                                    {/* Age category header */}
-                                    <div
-                                        className={`flex flex-wrap items-center justify-between gap-3 border-b-2 ${style.border} ${style.header} px-5 py-4 sm:px-6`}
-                                    >
-                                        <h2 className="text-xl font-bold text-slate-900">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                            Uzrasna kategorija
+                                        </p>
+                                        <h2 className="mt-1 text-xl font-bold text-[#142B4A]">
                                             {category}
                                         </h2>
-
-                                        <span
-                                            className={`rounded-full px-3 py-1 text-sm font-semibold ${style.badge}`}
-                                        >
-                                            {fightersCount} boraca
-                                        </span>
                                     </div>
 
-                                    {/* Weight categories */}
-                                    <div className="space-y-4 p-4 sm:p-6">
-                                        {Object.entries(weightGroups ?? {})
-                                            .sort(
-                                                ([a], [b]) =>
-                                                    Number(a) - Number(b)
-                                            )
-                                            .map(
-                                                ([
-                                                    weightCategory,
-                                                    categoryRegistrations,
-                                                ]) => (
-                                                    <div
-                                                        key={weightCategory}
-                                                        className="overflow-hidden rounded-xl border border-slate-200 bg-white"
-                                                    >
-                                                        {/* Weight category header */}
-                                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                                                            <h3 className="text-base font-bold text-slate-800">
-                                                                {weightCategory} kg
-                                                            </h3>
+                                    <span
+                                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${style.badge}`}
+                                    >
+                                        {fightersCount} takmičarki
+                                    </span>
+                                </div>
 
-                                                            <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                                                {categoryRegistrations.length} boraca
-                                                            </span>
-                                                        </div>
+                                {/* Weight categories */}
+                                <div className="space-y-5 p-4 sm:p-6">
+                                    {Object.entries(weightGroups ?? {})
+                                        .sort(
+                                            ([a], [b]) =>
+                                                Number(a) - Number(b)
+                                        )
+                                        .map(
+                                            ([
+                                                weightCategory,
+                                                categoryRegistrations,
+                                            ]) => (
+                                                <div
+                                                    key={weightCategory}
+                                                    className="overflow-hidden rounded-lg border border-[#DCE4ED]"
+                                                >
+                                                    {/* Weight category header */}
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F1F5F9] px-4 py-3">
+                                                        <h3 className="font-bold text-[#142B4A]">
+                                                            {weightCategory} kg
+                                                        </h3>
 
-                                                        {/* Fighters table */}
-                                                        <div className="overflow-x-auto">
-                                                            <table className="w-full min-w-[550px] text-left text-sm">
-                                                                <thead className="bg-slate-50 text-[10px] text-xs uppercase tracking-wide text-slate-500">
-                                                                    <tr>
-                                                                        <th className="px-4 py-3 font-semibold">
-                                                                            Ime
-                                                                        </th>
-                                                                        <th className="px-4 py-3 font-semibold">
-                                                                            Prezime
-                                                                        </th>
-                                                                        <th className="px-4 py-3 font-semibold">
-                                                                            Godina rođenja
-                                                                        </th>
-                                                                        <th className="px-4 py-3 font-semibold">
-                                                                            Iskustvo
-                                                                        </th>
-                                                                        <th className="px-4 py-3 font-semibold">
-                                                                            Težina
-                                                                        </th>
-                                                                    </tr>
-                                                                </thead>
-
-                                                                <tbody className="divide-y divide-slate-100">
-                                                                    {categoryRegistrations.map(
-                                                                        (registration) => (
-                                                                            <tr
-                                                                                key={registration.id}
-                                                                                className="transition-colors hover:bg-red-50/60"
-                                                                            >
-                                                                                <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-900">
-                                                                                    {registration.fighters.firstName}
-                                                                                </td>
-
-                                                                                <td className="whitespace-nowrap px-4 py-3.5 text-slate-700">
-                                                                                    {registration.fighters.lastName}
-                                                                                </td>
-
-                                                                                <td className="px-4 py-3.5 text-slate-600">
-                                                                                    {registration.fighters.yearOfBirth}
-                                                                                </td>
-
-                                                                                <td className="px-4 py-3.5">
-                                                                                    <span className="inline-flex min-w-8 justify-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-                                                                                        {Number(registration.experience)}
-                                                                                    </span>
-                                                                                </td>
-
-                                                                                <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-800">
-                                                                                    {weightCategory} kg
-                                                                                </td>
-                                                                            </tr>
-                                                                        )
-                                                                    )}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
+                                                        <span className="text-xs font-semibold text-slate-500">
+                                                            {categoryRegistrations.length} takmičarki
+                                                        </span>
                                                     </div>
-                                                )
-                                            )}
-                                    </div>
-                                </section>
-                            );
-                        }
-                    )}
-                </div>
 
-                {/* Back link */}
-                <div className="pt-2">
-                    <Link
-                        href="/competitions"
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-800"
-                    >
-                        <span aria-hidden="true">←</span>
-                        Nazad na takmičenja
-                    </Link>
-                </div>
+                                                    {/* Fighters table */}
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full min-w-[650px] text-left text-sm">
+                                                            <thead className="bg-white text-xs uppercase tracking-wide text-slate-500">
+                                                                <tr>
+                                                                    <th className="px-4 py-3 font-semibold">
+                                                                        Ime
+                                                                    </th>
+                                                                    <th className="px-4 py-3 font-semibold">
+                                                                        Prezime
+                                                                    </th>
+                                                                    <th className="px-4 py-3 font-semibold">
+                                                                        Klub
+                                                                    </th>
+                                                                    <th className="px-4 py-3 text-center font-semibold">
+                                                                        Godina rođenja
+                                                                    </th>
+                                                                    <th className="px-4 py-3 text-center font-semibold">
+                                                                        Broj borbi
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+
+                                                            <tbody className="divide-y divide-[#E8EDF3]">
+                                                                {categoryRegistrations.map(
+                                                                    (registration) => (
+                                                                        <tr
+                                                                            key={registration.id}
+                                                                            className="transition-colors hover:bg-[#F5F8FC]"
+                                                                        >
+                                                                            <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-[#142B4A]">
+                                                                                {registration.fighters.firstName}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3.5 text-slate-700">
+                                                                                {registration.fighters.lastName}
+                                                                            </td>
+
+                                                                            <td className="px-4 py-3.5 text-slate-600">
+                                                                                {registration.fighters.club?.name ?? "-"}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3.5 text-center font-medium text-slate-700">
+                                                                                {registration.fighters.yearOfBirth}
+                                                                            </td>
+
+                                                                            <td className="px-4 py-3.5 text-center">
+                                                                                <span className="inline-flex min-w-9 justify-center rounded-md bg-[#EAF0F6] px-2.5 py-1 text-xs font-bold text-[#24476B]">
+                                                                                    {Number(registration.experience)}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    )
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                </div>
+                            </section>
+                        );
+                    }
+                )}
+
+                {/* Empty state */}
+                {totalFighters === 0 && (
+                    <div className="rounded-xl border border-dashed border-[#C9D5E2] bg-white px-6 py-12 text-center">
+                        <p className="text-lg font-semibold text-[#142B4A]">
+                            Nema prijavljenih takmičarki
+                        </p>
+                        <p className="mt-2 text-sm text-slate-500">
+                            Za izabrani filter trenutno nema prijavljenih takmičarki.
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {/* Back link */}
+            <div className="pt-2">
+                <Link
+                    href="/competitions"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#DCE4ED] bg-white px-4 py-2.5 text-sm font-semibold text-[#24476B] shadow-sm transition hover:bg-[#EAF0F6]"
+                >
+                    <span aria-hidden="true">←</span>
+                    Nazad na takmičenja
+                </Link>
             </div>
         </main>
     );
-
 }

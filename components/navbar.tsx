@@ -1,79 +1,111 @@
+
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { logout } from "@/lib/auth";
-import { useRouter } from "next/navigation";
-
 
 export default function Navbar() {
-    const {data: session} = useSession()
+    const { data: session } = useSession();
+    const pathname = usePathname();
+
+    const navLinkClass = (href: string) => {
+        const isActive =
+            pathname === href ||
+            (href !== "/" && pathname.startsWith(href));
+
+        return `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            isActive
+                ? "bg-[#294666] text-white"
+                : "text-slate-300 hover:bg-[#203B5B] hover:text-white"
+        }`;
+    };
+
     return (
-    <nav className="bg-red-950 shadow-lg border-b border-red-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center min-h-20">
+        <aside className="flex min-h-screen w-[250px] shrink-0 flex-col bg-[#142B4A] text-white">
 
-            {/* Logo and brand */}
-            <div className="flex">
-            <Link
-                href="/"
-                className="flex items-center gap-3 py-3"
-            >
-                <span className="text-lg sm:text-xl font-bold text-white tracking-wide">
-                COMPETITION MANAGEMENT
-                </span>
-            </Link>
+            {/* Logo */}
+            <div className="flex h-20 items-center px-6">
+                <Link href="/" className="text-lg font-bold tracking-wide">
+                    FIGHT MANAGER
+                    <span className="mt-1 block text-[10px] font-medium tracking-[0.2em] text-slate-400">
+                        ADMIN PANEL
+                    </span>
+                </Link>
             </div>
 
-            {/* Navigation links */}
-            <div className="flex items-center gap-1 sm:gap-3">
+            <div className="mx-4 border-t border-[#36506D]" />
 
-            <Link
-                href="/competitions"
-                className="px-4 py-3 text-base font-semibold tracking-wide text-red-100 rounded-lg hover:text-white hover:bg-red-800 transition-colors duration-200"
-            >
-                Competitions
-            </Link>
-            <div className="h-7 w-px bg-red-800 mx-1" />
+            {/* Navigation */}
+            <nav className="flex-1 space-y-6 px-3 py-6">
 
-            {session ? (
-                <>
-                <Link
-                    href="/admin"
-                    className="px-4 py-3 text-base font-semibold tracking-wide text-red-100 rounded-lg hover:text-white hover:bg-red-800 transition-colors duration-200"
-                >
-                    Admin
-                </Link>
-                <div className="h-7 w-px bg-red-800 mx-1" />
+                <div>
+                    <p className="mb-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Main menu
+                    </p>
 
-                <Link
-                    href="/registerfighter"
-                    className="px-4 py-3 text-base font-semibold tracking-wide text-red-100 rounded-lg hover:text-white hover:bg-red-800 transition-colors duration-200"
-                >
-                    Register Fighter
-                </Link>
-                <div className="h-7 w-px bg-red-800 mx-1" />
+                    <div className="space-y-1">
+                        <Link href="/competitions" className={navLinkClass("/competitions")}>
+                            <span>🏆</span>
+                            Competitions
+                        </Link>
 
-                <button
-                    onClick={logout}
-                    className="px-4 py-3 text-base font-semibold tracking-wide text-white rounded-lg bg-red-800 hover:bg-red-700 transition-colors duration-200"
-                >
-                    Sign Out
-                </button>
-                </>
-            ) : (
-                <Link
-                href="/auth/signin"
-                className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-red-800 hover:bg-red-700 transition-colors duration-200"
-                >
-                Sign In
-                </Link>
-            )}
+                        {session && (
+                            <>
+                                <Link href="/admin" className={navLinkClass("/admin")}>
+                                    <span>⚙️</span>
+                                    Admin
+                                </Link>
 
+                                <Link
+                                    href="/registerfighter"
+                                    className={navLinkClass("/registerfighter")}
+                                >
+                                    <span>👤</span>
+                                    Register Fighter
+                                </Link>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </nav>
+
+            {/* User section */}
+            <div className="border-t border-[#36506D] p-4">
+                {session ? (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 px-2">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#36506D] font-semibold">
+                                {(session.user?.name || "A").charAt(0).toUpperCase()}
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold">
+                                    {session.user?.name || "Administrator"}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                    Administrator
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={logout}
+                            className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-[#203B5B] hover:text-white"
+                        >
+                            Sign Out
+                        </button>
+                    </div>
+                ) : (
+                    <Link
+                        href="/auth/signin"
+                        className="block rounded-lg bg-white px-4 py-2.5 text-center text-sm font-semibold text-[#142B4A] transition-colors hover:bg-slate-200"
+                    >
+                        Sign In
+                    </Link>
+                )}
             </div>
-        </div>
-        </div>
-    </nav>
+        </aside>
     );
 }

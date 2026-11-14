@@ -1,22 +1,19 @@
-"use client";
-import { FormEvent, useEffect, useState } from "react"
 
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
 
 type Competition = {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 };
 
 type Gym = {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 };
 
-
-
-
-export default function RegisterFighterPage()
-{   //useState čuva takmičenja koja dodju iz baze.
+export default function RegisterFighterPage() {
     const [competitions, setCompetitions] = useState<Competition[]>([]);
     const [gyms, setGyms] = useState<Gym[]>([]);
 
@@ -25,43 +22,45 @@ export default function RegisterFighterPage()
     const [success, setSuccess] = useState<boolean | null>(null);
 
     useEffect(() => {
-        async function fetchCompetitions(){
-            const response =  await fetch("/api/competitions");
-            const data = await response.json()
+        async function fetchCompetitions() {
+            const response = await fetch("/api/competitions");
+            const data = await response.json();
 
-            setCompetitions(data)
+            setCompetitions(data);
         }
 
         fetchCompetitions();
-    },[])
+    }, []);
 
-    useEffect(()=>{
-        async function fetchGyms(){
+    useEffect(() => {
+        async function fetchGyms() {
             const response = await fetch("api/gyms");
-            const data = await response.json()
+            const data = await response.json();
 
             setGyms(data);
         }
-        fetchGyms();
-    }, [])
 
-    function handleGymsChange(event: React.ChangeEvent<HTMLSelectElement>){
+        fetchGyms();
+    }, []);
+
+    function handleGymsChange(event: React.ChangeEvent<HTMLSelectElement>) {
         const selectedGymId = event.target.value;
         console.log("Selected GYM ID:", selectedGymId);
     }
 
-    function handleCompetitionChange( event: React.ChangeEvent<HTMLSelectElement>) {
+    function handleCompetitionChange(event: React.ChangeEvent<HTMLSelectElement>) {
         const selectedCompetitionId = event.target.value;
-
         console.log("Selected competition ID:", selectedCompetitionId);
     }
 
-    const handleFighterRegistrationSubmit = async(e: FormEvent<HTMLFormElement>) => {
+    const handleFighterRegistrationSubmit = async (
+        e: FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
+
         const form = e.currentTarget;
-        //I would say, we are collecting entered data in const data = {...}
         const fighterDataHTML = new FormData(form);
-        //data is javascript object
+
         const data = {
             competitionId: fighterDataHTML.get("selectcompetition"),
             firstName: fighterDataHTML.get("firstname"),
@@ -70,139 +69,297 @@ export default function RegisterFighterPage()
             yearOfBirth: fighterDataHTML.get("birthyear"),
             clubId: fighterDataHTML.get("gym"),
             weight: fighterDataHTML.get("weight"),
-            experience: fighterDataHTML.get("experience")
-        }
-        //now we need to send those data through API request
-        //it will be created at app/api/registerfighter/route.ts. Naming convention & fodler structure are so important,
-        // we have route.ts also in app/api/auth/[..nextauth] but it is completly different action
+            experience: fighterDataHTML.get("experience"),
+        };
 
-        try{
+        try {
             const response = await fetch("/api/registerfighter", {
                 method: "POST",
                 headers: {
-                    "Content-Type":"application/json"
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify(data) //covnert JS object(data) to JSON
-            })
-            
-            const result = await response.json()
+                body: JSON.stringify(data),
+            });
 
-            if(!response.ok){
+            const result = await response.json();
+
+            if (!response.ok) {
                 setSuccess(false);
                 setMessage(result.message ?? "Registracija nije uspela.");
                 return;
             }
 
             setSuccess(true);
-            setMessage("Prijava borca je uspešno obavljena.")
+            setMessage("Prijava borca je uspešno obavljena.");
             form.reset();
-
-        }catch(error){
+        } catch (error) {
             setSuccess(false);
-            setMessage("Greška pri povezivanju sa serverom.")
+            setMessage("Greška pri povezivanju sa serverom.");
         }
-    }
+    };
 
-    const findRegisteredCompetitions = async() =>{
-        console.log("Lets try to read competitons from database")
+    const findRegisteredCompetitions = async () => {
+        console.log("Lets try to read competitons from database");
 
-        try{
-            await fetch("api/competitions/",{
+        try {
+            await fetch("api/competitions/", {});
+        } catch (error) {}
+    };
 
-            })
+    const inputClass =
+        "mt-2 w-full rounded-lg border border-[#DCE4ED] bg-white px-4 py-3 text-sm text-[#142B4A] outline-none transition placeholder:text-slate-400 focus:border-[#315A83] focus:ring-2 focus:ring-[#315A83]/20";
 
-        }catch(error){
+    const labelClass = "block text-sm font-semibold text-slate-700";
 
-        }
-    }
+    return (
+        <main className="mx-auto w-full max-w-5xl space-y-8">
 
-    return(
-        <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Register your fighter</h1>
-            <form 
-                className="bg-white border border-red-100 rounded-xl p-6 shadow-lg space-y-6" 
-                onSubmit={handleFighterRegistrationSubmit}>
-                <div>
-                    <label htmlFor="selectcompetition" className="block text-sm font-medium text-gray-700">Select Competition</label>
-                     <select
-                        name="selectcompetition"
-                        id="selectcompetition"
-                        onChange={handleCompetitionChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50"
+            {/* Page header */}
+            <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#24476B]">
+                    Fighter Management
+                </p>
+
+                <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#142B4A] sm:text-4xl">
+                    Prijava borca
+                </h1>
+
+                <p className="mt-2 text-sm text-slate-500 sm:text-base">
+                    Unos podataka borca i prijava za izabrano takmičenje.
+                </p>
+            </div>
+
+            {/* Registration form */}
+            <form
+                onSubmit={handleFighterRegistrationSubmit}
+                className="overflow-hidden rounded-xl border border-[#DCE4ED] bg-white shadow-sm"
+            >
+                <div className="space-y-8 p-6 sm:p-8">
+
+                    {/* Competition and club */}
+                    <section>
+                        <div className="mb-5 flex items-center gap-3 border-b border-[#E8EDF3] pb-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EAF0F6] text-[#24476B]">
+                                <span className="text-lg">🏆</span>
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-[#142B4A]">
+                                    Takmičenje i klub
+                                </h2>
+                                <p className="text-xs text-slate-500">
+                                    Izbor takmičenja i matičnog kluba
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label
+                                    htmlFor="selectcompetition"
+                                    className={labelClass}
+                                >
+                                    Takmičenje
+                                </label>
+
+                                <select
+                                    name="selectcompetition"
+                                    id="selectcompetition"
+                                    onChange={handleCompetitionChange}
+                                    className={inputClass}
+                                >
+                                    <option value="">Izaberi takmičenje</option>
+
+                                    {competitions.map((competition) => (
+                                        <option
+                                            key={competition.id}
+                                            value={competition.id}
+                                        >
+                                            {competition.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label htmlFor="gym" className={labelClass}>
+                                    Klub
+                                </label>
+
+                                <select
+                                    name="gym"
+                                    id="gym"
+                                    onChange={handleGymsChange}
+                                    className={inputClass}
+                                >
+                                    <option value="">Izaberi klub</option>
+
+                                    {gyms.map((gym) => (
+                                        <option key={gym.id} value={gym.id}>
+                                            {gym.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Personal information */}
+                    <section>
+                        <div className="mb-5 flex items-center gap-3 border-b border-[#E8EDF3] pb-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EAF0F6] text-[#24476B]">
+                                <span className="text-lg">👤</span>
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-[#142B4A]">
+                                    Lični podaci borca
+                                </h2>
+                                <p className="text-xs text-slate-500">
+                                    Osnovne informacije o takmičaru
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label htmlFor="firstname" className={labelClass}>
+                                    Ime
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="firstname"
+                                    id="firstname"
+                                    required
+                                    placeholder="Ime borca"
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="lastname" className={labelClass}>
+                                    Prezime
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="lastname"
+                                    id="lastname"
+                                    required
+                                    placeholder="Prezime borca"
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="gender" className={labelClass}>
+                                    Pol
+                                </label>
+
+                                <select
+                                    name="gender"
+                                    id="gender"
+                                    required
+                                    className={inputClass}
+                                >
+                                    <option value="">Izaberi pol</option>
+                                    <option value="MALE">Muški</option>
+                                    <option value="FEMALE">Ženski</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label htmlFor="birthyear" className={labelClass}>
+                                    Godina rođenja
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="birthyear"
+                                    id="birthyear"
+                                    required
+                                    placeholder="Npr. 2005"
+                                    className={inputClass}
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Competition information */}
+                    <section>
+                        <div className="mb-5 flex items-center gap-3 border-b border-[#E8EDF3] pb-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EAF0F6] text-[#24476B]">
+                                <span className="text-lg">🥊</span>
+                            </div>
+
+                            <div>
+                                <h2 className="font-bold text-[#142B4A]">
+                                    Takmičarski podaci
+                                </h2>
+                                <p className="text-xs text-slate-500">
+                                    Težina i prethodno takmičarsko iskustvo
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label htmlFor="weight" className={labelClass}>
+                                    Težina (kg)
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="weight"
+                                    id="weight"
+                                    required
+                                    placeholder="Npr. 67.5"
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="experience" className={labelClass}>
+                                    Broj prethodnih borbi
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="experience"
+                                    id="experience"
+                                    required
+                                    placeholder="Ukupan broj borbi"
+                                    className={inputClass}
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Submit */}
+                    <div className="border-t border-[#E8EDF3] pt-6">
+                        <button
+                            type="submit"
+                            className="w-full rounded-lg bg-[#142B4A] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#24476B] focus:outline-none focus:ring-2 focus:ring-[#315A83] focus:ring-offset-2"
                         >
-                        <option value="">Select a competition</option>
+                            Registruj borca
+                        </button>
 
-                        {competitions.map((competition) => (
-                            <option key={competition.id} value={competition.id}>
-                            {competition.name}
-                            </option>
-                        ))}
-                        </select>
+                        {message && (
+                            <p
+                                role="status"
+                                className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${
+                                    success
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : "border-red-200 bg-red-50 text-red-700"
+                                }`}
+                            >
+                                {message}
+                            </p>
+                        )}
+                    </div>
                 </div>
-                <div>
-                    <label htmlFor="firstname" className="block text-sm font-medium text-gray-700">First Name</label>
-                    <input type="text" name="firstname" id="firstname" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50" />
-                </div>
-
-                <div>
-                    <label htmlFor="lastname" className="block text-sm font-medium text-gray-700">Last Name</label>
-                    <input type="text" name="lastname" id="lastname" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50" />
-                </div>
-                <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>
-                    <select name="gender" id="gender" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50">
-                        <option value="">Select a gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="birthyear" className="block text-sm font-medium text-gray-700">Year of birth</label>
-                    <input type="text" name="birthyear" id="birthyear" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50" />
-                </div>
-                <div>
-                    <label htmlFor="gym" className="block text-sm font-medium text-gray-700">Select Gym</label>
-                     <select
-                        name="gym"
-                        id="gym"
-                        onChange={handleGymsChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50"
-                        >
-                        <option value="">Select a gym</option>
-
-                        {gyms.map((gyms) => (
-                            <option key={gyms.id} value={gyms.id}>
-                            {gyms.name}
-                            </option>
-                        ))}
-                        </select>
-                </div>
-                <div>
-                    <label htmlFor="weight" className="block text-sm font-medium text-gray-700">Weight</label>
-                    <input type="text" name="weight" id="weight" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50" />
-                </div>
-                <div>
-                    <label htmlFor="experience" className="block text-sm font-medium text-gray-700">Experience</label>
-                    <p>Total number of fights</p>
-                    <input type="text" name="experience" id="experience" required className="mt-1 block w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-50" />
-                </div>
-                <button 
-                    type="submit" 
-                    className="w-full bg-red-900 text-white font-bold py-3 rounded-lg hover:bg-red-800 transition"
-                    >REGISTER A FIGHTER
-                </button>
-                {message && (
-                    <p
-                        role="status"
-                        className={success
-                            ? "mt-3 text-sm text-green-700"
-                            : "mt-3 text-sm text-red-700"
-                        }
-                    >
-                        {message}
-                    </p>
-                )}
             </form>
-        </div>
-    )
+        </main>
+    );
 }

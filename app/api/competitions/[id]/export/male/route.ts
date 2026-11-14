@@ -13,15 +13,24 @@ type Registration = Awaited<
 >["registrations"][number];
 
 const PAGE_MARGIN = 36;
-const PAGE_WIDTH = 595.28; // A4 portrait
 const PAGE_HEIGHT = 841.89;
-const TABLE_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
+const TABLE_WIDTH = 595.28 - PAGE_MARGIN * 2;
 const BOTTOM_LIMIT = PAGE_HEIGHT - 55;
 
 const ROW_HEIGHT = 24;
 const FRAME_PADDING = 7;
 const FRAME_X = PAGE_MARGIN - FRAME_PADDING;
 const FRAME_WIDTH = TABLE_WIDTH + FRAME_PADDING * 2;
+
+const COLORS = {
+    navy: "#142B4A",
+    blue: "#315A83",
+    text: "#334155",
+    muted: "#64748B",
+    border: "#DCE4ED",
+    header: "#F1F5F9",
+    white: "#FFFFFF",
+};
 
 const columns = [
     { title: "FIRST NAME", width: 70 },
@@ -37,10 +46,10 @@ function drawTableHeader(doc: PDFKit.PDFDocument, y: number) {
     for (const column of columns) {
         doc
             .rect(x, y, column.width, ROW_HEIGHT)
-            .fillAndStroke("#e8edf3", "#333333");
+            .fillAndStroke(COLORS.header, COLORS.border);
 
         doc
-            .fillColor("#1e293b")
+            .fillColor(COLORS.navy)
             .font("Arial-Bold")
             .fontSize(7)
             .text(column.title, x + 4, y + 8, {
@@ -76,10 +85,10 @@ function drawTableRow(
     columns.forEach((column, index) => {
         doc
             .rect(x, y, column.width, ROW_HEIGHT)
-            .fillAndStroke("#ffffff", "#333333");
+            .fillAndStroke(COLORS.white, COLORS.border);
 
         doc
-            .fillColor("#334155")
+            .fillColor(COLORS.text)
             .font("Arial")
             .fontSize(8)
             .text(values[index], x + 4, y + 7, {
@@ -101,8 +110,8 @@ function drawAgeCategoryFrame(
     endY: number,
 ) {
     doc
-        .lineWidth(1.5)
-        .strokeColor("#000000")
+        .lineWidth(1)
+        .strokeColor(COLORS.border)
         .rect(
             FRAME_X,
             startY,
@@ -112,12 +121,42 @@ function drawAgeCategoryFrame(
         .stroke();
 }
 
+function drawAgeCategoryTitle(
+    doc: PDFKit.PDFDocument,
+    title: string,
+    y: number,
+) {
+    doc
+        .font("Arial-Bold")
+        .fontSize(13)
+        .fillColor(COLORS.navy)
+        .text(title, PAGE_MARGIN, y);
+}
+
+function drawWeightCategoryTitle(
+    doc: PDFKit.PDFDocument,
+    weightCategory: string,
+    y: number,
+) {
+    doc
+        .font("Arial-Bold")
+        .fontSize(10)
+        .fillColor(COLORS.blue)
+        .text(
+            `${Number(weightCategory) === 91.5 ? "91+" : weightCategory} kg`,
+            PAGE_MARGIN,
+            y,
+        );
+}
+
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
         const { id } = await params;
+        const { searchParams } = new URL(request.url);
+        const experience = searchParams.get("experience") ?? "under5";
 
         const competition = await prisma.competition.findUnique({
             where: { id },
@@ -130,7 +169,10 @@ export async function GET(
             );
         }
 
-        const { groupedRegistrations } = await getMaleFightCard(id);
+        const { groupedRegistrations } = await getMaleFightCard(
+            id,
+            experience,
+        );
 
         const regularFont = path.join(
             process.cwd(),
@@ -179,7 +221,7 @@ export async function GET(
         doc
             .font("Arial-Bold")
             .fontSize(17)
-            .fillColor("#111827")
+            .fillColor(COLORS.navy)
             .text(competition.name, PAGE_MARGIN, 35, {
                 width: TABLE_WIDTH,
                 align: "center",
@@ -188,7 +230,7 @@ export async function GET(
         doc
             .font("Arial-Bold")
             .fontSize(11)
-            .fillColor("#991b1b")
+            .fillColor(COLORS.blue)
             .text("MALE FIGHT CARD", PAGE_MARGIN, 59, {
                 width: TABLE_WIDTH,
                 align: "center",
@@ -206,7 +248,7 @@ export async function GET(
         doc
             .font("Arial")
             .fontSize(8)
-            .fillColor("#64748b")
+            .fillColor(COLORS.muted)
             .text(info, PAGE_MARGIN, 78, {
                 width: TABLE_WIDTH,
                 align: "center",
@@ -226,23 +268,19 @@ export async function GET(
 
             const newFrameStartY = y - 7;
 
-            doc
-                .font("Arial-Bold")
-                .fontSize(13)
-                .fillColor("#991b1b")
-                .text(`${ageCategory} (continued)`, PAGE_MARGIN, y);
+            drawAgeCategoryTitle(
+                doc,
+                `${ageCategory} (continued)`,
+                y,
+            );
 
             y += 21;
 
-            doc
-                .font("Arial-Bold")
-                .fontSize(10)
-                .fillColor("#1e293b")
-                .text(
-                    `${Number(weightCategory) === 91.5 ? "91+" : weightCategory} kg`,
-                    PAGE_MARGIN,
-                    y,
-                );
+            drawWeightCategoryTitle(
+                doc,
+                weightCategory,
+                y,
+            );
 
             y += 16;
             y = drawTableHeader(doc, y);
@@ -254,7 +292,6 @@ export async function GET(
         for (const [ageCategory, weightGroups] of Object.entries(
             groupedRegistrations,
         )) {
-            // Leave enough room for the category heading and its first table.
             if (y + 75 > BOTTOM_LIMIT) {
                 doc.addPage();
                 y = PAGE_MARGIN + 8;
@@ -262,11 +299,7 @@ export async function GET(
 
             let frameStartY = y - 7;
 
-            doc
-                .font("Arial-Bold")
-                .fontSize(13)
-                .fillColor("#991b1b")
-                .text(ageCategory, PAGE_MARGIN, y);
+            drawAgeCategoryTitle(doc, ageCategory, y);
 
             y += 21;
 
@@ -275,42 +308,31 @@ export async function GET(
             ).sort(([a], [b]) => Number(a) - Number(b));
 
             for (const [weightCategory, registrations] of sortedWeightGroups) {
-                // Make sure the weight heading, table header and at least
-                // one fighter row fit on the current page.
                 if (y + 16 + ROW_HEIGHT * 2 > BOTTOM_LIMIT) {
-                    doc
-                        .lineWidth(1.5)
-                        .strokeColor("#000000")
-                        .rect(
-                            FRAME_X,
-                            frameStartY,
-                            FRAME_WIDTH,
-                            BOTTOM_LIMIT - frameStartY,
-                        )
-                        .stroke();
+                    drawAgeCategoryFrame(
+                        doc,
+                        frameStartY,
+                        BOTTOM_LIMIT,
+                    );
 
                     doc.addPage();
                     y = PAGE_MARGIN + 8;
                     frameStartY = y - 7;
 
-                    doc
-                        .font("Arial-Bold")
-                        .fontSize(13)
-                        .fillColor("#991b1b")
-                        .text(`${ageCategory} (continued)`, PAGE_MARGIN, y);
+                    drawAgeCategoryTitle(
+                        doc,
+                        `${ageCategory} (continued)`,
+                        y,
+                    );
 
                     y += 21;
                 }
 
-                doc
-                    .font("Arial-Bold")
-                    .fontSize(10)
-                    .fillColor("#1e293b")
-                    .text(
-                        `${Number(weightCategory) === 91.5 ? "91+" : weightCategory} kg`,
-                        PAGE_MARGIN,
-                        y,
-                    );
+                drawWeightCategoryTitle(
+                    doc,
+                    weightCategory,
+                    y,
+                );
 
                 y += 16;
                 y = drawTableHeader(doc, y);
@@ -353,7 +375,7 @@ export async function GET(
             doc
                 .font("Arial")
                 .fontSize(8)
-                .fillColor("#64748b")
+                .fillColor(COLORS.muted)
                 .text(
                     `Strana ${pageIndex + 1} od ${pageRange.count}`,
                     PAGE_MARGIN,
